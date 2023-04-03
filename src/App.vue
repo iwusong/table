@@ -61,17 +61,19 @@ let mouseMoveFunc = throttle((e: MouseEvent, row: number, col: number) => {
       col,
       row
     }
+    resetSelect()
     setSelectClass()
   }
 }, 100)
 
 function mergeCells() {
   let isFirst = true
-  for (let i = selectStratCell.row; i <= selectEndCell.row; i++) {
-    for (let j = selectStratCell.col; j <= selectEndCell.col; j++) {
+  let reverseSECell1 = reverseSECell()
+  for (let i = reverseSECell1[0].row; i <= reverseSECell1[1].row; i++) {
+    for (let j = reverseSECell1[0].col; j <= reverseSECell1[1].col; j++) {
       if (isFirst) {
-        data[i][j].we = data[i][j].we + Math.abs(selectStratCell.col - selectEndCell.col)
-        data[i][j].he = data[i][j].he + Math.abs(selectStratCell.row - selectEndCell.row)
+        data[i][j].we = reverseSECell1[1].col- reverseSECell1[0].col+data[reverseSECell1[1].row][reverseSECell1[1].col].we
+        data[i][j].he = reverseSECell1[1].row- reverseSECell1[0].row+data[reverseSECell1[1].row][reverseSECell1[1].col].he
         isFirst = false
       } else {
         data[i][j].beMerged = true
@@ -86,8 +88,9 @@ function mergeCells() {
 }
 
 function setSelectClass() {
-  for (let i = selectStratCell.row; i <= selectEndCell.row; i++) {
-    for (let j = selectStratCell.col; j <= selectEndCell.col; j++) {
+  let reverseSECell1 = reverseSECell()
+  for (let i = reverseSECell1[0].row; i <= reverseSECell1[1].row; i++) {
+    for (let j = reverseSECell1[0].col; j <= reverseSECell1[1].col; j++) {
       data[i][j].isSelect = true
     }
   }
@@ -100,7 +103,16 @@ function resetSelect() {
     }
   }
 }
-
+function reverseSECell() {
+  let rows = Math.min(selectStratCell.row, selectEndCell.row)
+  let rowe = Math.max(selectStratCell.row, selectEndCell.row)
+  let cols = Math.min(selectStratCell.col, selectEndCell.col)
+  let cole = Math.max(selectStratCell.col, selectEndCell.col)
+  return [
+    { row: rows, col: cols },
+    { row: rowe, col: cole }
+  ]
+}
 let rightIsPress = ref(false)
 let data: Array<Array<dataItem>> = reactive([asd('1'), asd('2'), asd('3')])
 </script>
