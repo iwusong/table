@@ -1,8 +1,8 @@
 <template>
-  <div @contextmenu="(e) => e.preventDefault()">
-    <div class="wh100p txt" v-if="NotEdit" @click="cf">
+  <div class="cell-div" @click="cf" >
+    <span class="txt" v-if="NotEdit">
       {{ modelValue }}
-    </div>
+    </span>
     <input
       v-else
       class="wh100p"
@@ -17,14 +17,14 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
 
-defineProps({
-  modelValue: String
-})
+defineProps<{
+  modelValue: string
+}>()
+
 defineEmits(['update:modelValue'])
 let input = ref()
 
 function cf() {
-
   NotEdit.value = !NotEdit.value
   nextTick(() => {
     input.value.focus()
@@ -33,11 +33,13 @@ function cf() {
 }
 
 function blurFun() {
-
   NotEdit.value = !NotEdit.value
 }
 
 let NotEdit = ref(true)
+
+
+
 </script>
 
 <style scoped>
@@ -45,11 +47,13 @@ let NotEdit = ref(true)
   width: 100%;
   height: 100%;
 }
-
+.cell-div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .txt {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  line-height: 50px;
 }
 
 div,

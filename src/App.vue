@@ -1,16 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { nextTick, reactive, ref } from 'vue'
 import CellCom from '@/components/cell-com.vue'
 import { throttle } from 'lodash-es'
-
-interface dataItem {
-  value: string
-
-  we: number
-  he: number
-  beMerged: boolean
-  isSelect: boolean
-}
+import type { dataItem } from '@/type'
 
 interface selectCell {
   col: number
@@ -19,20 +11,29 @@ interface selectCell {
 
 const widthBase = 160
 const HeightBase = 50
-let selectStratCell: selectCell
-let selectEndCell: selectCell
+let selectStratCell = reactive<selectCell>({ row: 0, col: 0 })
+let selectEndCell = reactive<selectCell>({ row: 0, col: 0 })
 
-function asd(row: string) {
-  return Array.from({ length: 5 }).map((item, index) => {
-    return {
-      value: row + (index + 1 + ''),
-      beMerged: false,
-      we: 1,
-      he: 1,
-      isSelect: false
-    }
-  })
+let data: Array<Array<dataItem>> = reactive([])
+let mouseX = ref(0)
+let mouseY = ref(0)
+function initTable(row: number, col: number) {
+  for (let i = 0; i < row; i++) {
+    data.push(
+      Array.from({ length: col }).map(() => {
+        return {
+          value: '',
+          beMerged: false,
+          we: 1,
+          he: 1,
+          isSelect: false
+        }
+      })
+    )
+  }
 }
+
+initTable(8, 6)
 
 function rightDownListen(e: MouseEvent, row: number, col: number) {
   if (e.buttons === 2) {
@@ -42,6 +43,7 @@ function rightDownListen(e: MouseEvent, row: number, col: number) {
       col
     }
     rightIsPress.value = true
+    contextmenuShow.value = false
   }
 }
 
@@ -58,11 +60,13 @@ function rightUpListen(e: MouseEvent, row: number, col: number) {
 let mouseMoveFunc = throttle((e: MouseEvent, row: number, col: number) => {
   if (rightIsPress.value) {
     selectEndCell = {
-      col,
-      row
+      row,
+      col
     }
     resetSelect()
     setSelectClass()
+    mouseX.value = e.clientX
+    mouseY.value = e.clientY
   }
 }, 100)
 
@@ -72,8 +76,14 @@ function mergeCells() {
   for (let i = reverseSECell1[0].row; i <= reverseSECell1[1].row; i++) {
     for (let j = reverseSECell1[0].col; j <= reverseSECell1[1].col; j++) {
       if (isFirst) {
-        data[i][j].we = reverseSECell1[1].col- reverseSECell1[0].col+data[reverseSECell1[1].row][reverseSECell1[1].col].we
-        data[i][j].he = reverseSECell1[1].row- reverseSECell1[0].row+data[reverseSECell1[1].row][reverseSECell1[1].col].he
+        data[i][j].we =
+          reverseSECell1[1].col -
+          reverseSECell1[0].col +
+          data[reverseSECell1[1].row][reverseSECell1[1].col].we
+        data[i][j].he =
+          reverseSECell1[1].row -
+          reverseSECell1[0].row +
+          data[reverseSECell1[1].row][reverseSECell1[1].col].he
         isFirst = false
       } else {
         data[i][j].beMerged = true
@@ -85,6 +95,7 @@ function mergeCells() {
   selectEndCell.col = 0
   selectEndCell.row = 0
   resetSelect()
+  contextmenuShow.value = false
 }
 
 function setSelectClass() {
@@ -103,6 +114,7 @@ function resetSelect() {
     }
   }
 }
+
 function reverseSECell() {
   let rows = Math.min(selectStratCell.row, selectEndCell.row)
   let rowe = Math.max(selectStratCell.row, selectEndCell.row)
@@ -113,19 +125,36 @@ function reverseSECell() {
     { row: rowe, col: cole }
   ]
 }
+
 let rightIsPress = ref(false)
-let data: Array<Array<dataItem>> = reactive([asd('1'), asd('2'), asd('3')])
+let contextmenuShow = ref(false)
+function contextmenuFun(e: MouseEvent) {
+  e.preventDefault()
+  nextTick(() => {
+    contextmenuShow.value = true
+  })
+}
+function cellClick() {
+  selectStratCell.row = 0
+  selectStratCell.col = 0
+  selectEndCell.col = 0
+  selectEndCell.row = 0
+  resetSelect()
+  contextmenuShow.value = false
+}
 </script>
 
 <template>
-  <button>增加列</button>
-  <span>---</span>
-  <button @click="mergeCells">合并</button>
   <div style="height: 20px"></div>
-  <div :class="{ cursorCrosshair: rightIsPress }" class="form-box">
+  <div
+    @contextmenu="contextmenuFun($event)"
+    :class="{ cursorCrosshair: rightIsPress }"
+    class="form-box"
+  >
     <div v-for="(i, iIndex) in data" :key="i">
       <template v-for="(j, jIndex) in i" :key="j">
         <cell-com
+          @click="cellClick"
           @mousedown="rightDownListen($event, iIndex, jIndex)"
           @mouseup="rightUpListen($event, iIndex, jIndex)"
           @mousemove="mouseMoveFunc($event, iIndex, jIndex)"
@@ -142,6 +171,19 @@ let data: Array<Array<dataItem>> = reactive([asd('1'), asd('2'), asd('3')])
         />
       </template>
     </div>
+    <div
+      :style="{
+        left: mouseX + 'px',
+        top: mouseY + 'px'
+      }"
+      v-if="contextmenuShow"
+      class="table-contextmenu"
+    >
+      <button @click="mergeCells">合并单元格</button>
+      <button>取消合并</button>
+      <button>权限设置</button>
+      <button>样式设置</button>
+    </div>
   </div>
 </template>
 
@@ -152,7 +194,7 @@ let data: Array<Array<dataItem>> = reactive([asd('1'), asd('2'), asd('3')])
 }
 
 .cursorCrosshair {
-  cursor: crosshair;
+  cursor: cell;
 }
 
 .form-box div {
@@ -166,6 +208,24 @@ let data: Array<Array<dataItem>> = reactive([asd('1'), asd('2'), asd('3')])
 }
 
 .is-select {
-  background-color: rgba(31, 225, 232, 0.3);
+  background-color: rgba(208, 213, 213, 0.6);
+}
+.table-contextmenu {
+  width: 100px;
+  background-color: #ffffff;
+  position: fixed;
+  box-shadow: 3px 3px 8px 2px #606565;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.table-contextmenu button {
+  border: 0;
+  cursor: pointer;
+  padding: 8px 0;
+  background-color: #fff;
+}
+.table-contextmenu button:hover {
+  color: #09caee;
 }
 </style>
